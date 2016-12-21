@@ -20,7 +20,8 @@ var hash = NewHashRing(50)
 func main() {
 
 	conf.init()
-	connforwards.init()
+	connforwards.init(conf.remoteaddr)
+	connforwards2.init(conf.remoteaddr2)
 
 	nodeWeight := make(map[string]int)
 	nodeWeight["node1"] = 1
@@ -130,6 +131,7 @@ func (d *dnsforward) dnsudp() {
 		d.conns[i][bytestoInt16LE(data[0:2])] = remoteAddr
 
 		requestchan := connforwards.connchans[i].dnsrequestchan
+		requestchan2 := connforwards2.connchans[i].dnsrequestchan
 		//	hash.AddNode(remoteAddr.IP.String(), 1)
 
 		domain := data[12:read]
@@ -150,6 +152,7 @@ func (d *dnsforward) dnsudp() {
 		fmt.Println("type:", data[lenght+2])
 		if data[lenght+2] != 1 {
 			requestchan <- data[0:read]
+			requestchan2 <- data[0:read]
 			continue
 		}
 
@@ -163,6 +166,7 @@ func (d *dnsforward) dnsudp() {
 			data[11] = 0x01
 			newdata := append(data[0:read], addrec...)
 			requestchan <- newdata
+			requestchan2 <- newdata
 			fmt.Println("UDP Radiuscast ....", read, remoteAddr.String(),
 				"id:", bytestoInt16LE(data[0:2]),
 				"query:", dns,
@@ -177,6 +181,7 @@ func (d *dnsforward) dnsudp() {
 					"query:", dns,
 				)
 				requestchan <- newdata
+				requestchan2 <- newdata
 			}
 		}
 	}

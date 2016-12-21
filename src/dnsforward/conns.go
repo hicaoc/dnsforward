@@ -21,8 +21,9 @@ type conns struct {
 }
 
 var connforwards = &conns{}
+var connforwards2 = &conns{}
 
-func (c *conns) init() {
+func (c *conns) init(remoteaddr string) {
 	c.connsnum = 10
 	//	c.connlist = make([]net.Conn, c.connsnum)
 	c.connchans = make([]*connchan, c.connsnum)
@@ -33,7 +34,7 @@ func (c *conns) init() {
 		c.connchans[i] = &connchan{}
 		c.connchans[i].dnsrequestchan = make(chan []byte, 100)
 		c.connchans[i].dnsresponschan = make(chan []byte, 100)
-		go c.forwardudp(c.connchans[i])
+		go c.forwardudp(c.connchans[i], remoteaddr)
 	}
 }
 
@@ -42,9 +43,9 @@ func (c *conns) init() {
 // 	return crc32.ChecksumIEEE([]byte(key))
 // }
 
-func (c *conns) forwardudp(connchan *connchan) {
+func (c *conns) forwardudp(connchan *connchan, remoteadr string) {
 	// 创建监听
-	conn, err := net.Dial("udp", conf.remoteaddr)
+	conn, err := net.Dial("udp", remoteadr)
 	defer conn.Close()
 	if err != nil {
 		os.Exit(1)

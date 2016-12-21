@@ -17,6 +17,7 @@ import (
 type config struct {
 	localudpport int
 	remoteaddr   string
+	remoteaddr2  string
 	ednssubnet   []byte
 }
 
@@ -66,6 +67,8 @@ func (c *config) readconffile() {
 			c.localudpport = strtoint(s[1])
 		case "remoteaddr":
 			c.remoteaddr = s[1]
+		case "remoteaddr2":
+			c.remoteaddr2 = s[1]
 		case "ednssubnet":
 
 			c.ednssubnet = striptosubnet(s[1])
