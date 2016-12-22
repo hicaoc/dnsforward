@@ -96,7 +96,7 @@ func (d *dnsforward) dnsudp() {
 	for i := range connforwards.connchans {
 		go func(i int) {
 			for {
-				log.Println("respone send to client :", i)
+				//	log.Println("respone send to client :", i)
 				senddata := <-connforwards.connchans[i].dnsresponschan
 				//	log.Println("respone send to client :", senddata)
 				if c, ok := d.conns[i][bytestoInt16LE(senddata[0:2])]; ok {
@@ -144,12 +144,12 @@ func (d *dnsforward) dnsudp() {
 			domain = domain[domain[0]+1:]
 
 		}
-		fmt.Println("DNS query:", read, remoteAddr.String(),
-			"id:", bytestoInt16LE(data[0:2]),
-			"query:", dns,
-		)
+		// fmt.Println("DNS query:", read, remoteAddr.String(),
+		// 	"id:", bytestoInt16LE(data[0:2]),
+		// 	"query:", dns,
+		// )
 
-		fmt.Println("type:", data[lenght+2])
+		//	fmt.Println("type:", data[lenght+2])
 		if data[lenght+2] != 1 {
 			requestchan <- data[0:read]
 			requestchan2 <- data[0:read]
@@ -167,19 +167,19 @@ func (d *dnsforward) dnsudp() {
 			newdata := append(data[0:read], addrec...)
 			requestchan <- newdata
 			requestchan2 <- newdata
-			fmt.Println("UDP Radiuscast ....", read, remoteAddr.String(),
-				"id:", bytestoInt16LE(data[0:2]),
-				"query:", dns,
-			)
+			// fmt.Println("dns ....", read, remoteAddr.String(),
+			// 	"id:", bytestoInt16LE(data[0:2]),
+			// 	"query:", dns,
+			// )
 
 		} else {
 			if bytes.Equal(data[10:12], []byte{0x00, 0x01}) {
 				newdata := append(data[0:lenght+5], addrec...)
 
-				fmt.Println("UDP Radiuscast ....", read, remoteAddr.String(),
-					"id:", bytestoInt16LE(data[0:2]),
-					"query:", dns,
-				)
+				// fmt.Println("dns ....", read, remoteAddr.String(),
+				// 	"id:", bytestoInt16LE(data[0:2]),
+				// 	"query:", dns,
+				// )
 				requestchan <- newdata
 				requestchan2 <- newdata
 			}
