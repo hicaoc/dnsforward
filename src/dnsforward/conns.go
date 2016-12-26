@@ -15,18 +15,20 @@ type connchan struct {
 }
 
 type conns struct {
-	connsnum int
+
 	//connlist  []net.Conn
 	connchans []*connchan
 }
 
-var connforwards = &conns{}
+var connforwards1 = &conns{}
 var connforwards2 = &conns{}
+var connlocal1 = &conns{}
+var connlocal2 = &conns{}
 
 func (c *conns) init(remoteaddr string) {
-	c.connsnum = 10
+	//	c.connsnum = conf.connpoolsize
 	//	c.connlist = make([]net.Conn, c.connsnum)
-	c.connchans = make([]*connchan, c.connsnum)
+	c.connchans = make([]*connchan, conf.connpoolsize)
 
 	for i := range c.connchans {
 		id := strconv.Itoa(i)
@@ -34,7 +36,7 @@ func (c *conns) init(remoteaddr string) {
 		c.connchans[i] = &connchan{}
 		c.connchans[i].dnsrequestchan = make(chan []byte, 100)
 		c.connchans[i].dnsresponschan = make(chan []byte, 100)
-		go c.forwardudp(c.connchans[i], remoteaddr)
+		go c.forwardudp(c.connchans[i], remoteaddr, i)
 	}
 }
 
@@ -43,28 +45,34 @@ func (c *conns) init(remoteaddr string) {
 // 	return crc32.ChecksumIEEE([]byte(key))
 // }
 
-func (c *conns) forwardudp(connchan *connchan, remoteadr string) {
+func (c *conns) forwardudp(connchan *connchan, remoteadr string, chanid int) {
 	// 创建监听
 	conn, err := net.Dial("udp", remoteadr)
 	defer conn.Close()
 	if err != nil {
 		os.Exit(1)
 	}
-	log.Println("localaddr:", conn.LocalAddr().String())
+	log.Println("goruner:", chanid, conn.LocalAddr(), conn.RemoteAddr())
 
 	go func() {
 		for {
-			//	msg := <-connchan.dnsrequestchan
-			conn.Write(<-connchan.dnsrequestchan)
+			msg := <-connchan.dnsrequestchan
+			//	fmt.Println("query2:", msg)
+			conn.Write(msg)
+			//conn.Write(<-connchan.dnsrequestchan)
 		}
 	}()
 
 	for {
 		var dnsrespons = make([]byte, 2048)
 		read, _ := conn.Read(dnsrespons)
-		//	log.Println("respons is", read, dnsrespons[0:read])
+		//	fmt.Println("respons is+++", read, dnsrespons[0:read])
+		if read == 0 {
+			log.Println("query error，dns server respons timeout", chanid, conn.RemoteAddr())
+			continue
+		}
 		connchan.dnsresponschan <- dnsrespons[:read]
-		//	fmt.Println("msg is", remote, dnsrespons)
+		//	fmt.Println("respons is---", chanid, read, conn.RemoteAddr(), dnsrespons[0:read])
 	}
 }
 
