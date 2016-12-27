@@ -26,6 +26,7 @@ type domainitem struct {
 type dnsforward struct {
 	domainmap map[string]*domainitem
 	lock      sync.RWMutex
+	lockconn  sync.RWMutex
 	conns     []map[uint32]*net.UDPAddr //transaction ID
 }
 
@@ -146,8 +147,9 @@ func (d *dnsforward) dnsudp() {
 		if err != nil {
 			panic(err)
 		}
-
+		d.lockconn.Lock()
 		d.conns[i][bytestoInt16LE(data[0:2])] = remoteAddr
+		d.lockconn.Unlock()
 
 		requestchan1 = connforwards1.connchans[i].dnsrequestchan
 		if conf.remotednsaddr2 != "" {
@@ -285,13 +287,19 @@ func (d *dnsforward) reciverespons(i int, connpool *conns, conn *net.UDPConn) {
 			d.domainmap[domain.domainname] = domain
 			d.lock.Unlock()
 		}
+		d.lockconn.RLock()
 		if c, ok := d.conns[i][bytestoInt16LE(senddata[0:2])]; ok {
+			d.lockconn.RUnlock()
 			_, err := conn.WriteToUDP(senddata, c)
+			d.lockconn.Lock()
 			delete(d.conns[i], bytestoInt16LE(senddata[0:2]))
+			d.lockconn.Unlock()
 			if err != nil {
 				fmt.Println("1 发送数据失败!", err)
 				//	return
 			}
+		} else {
+			d.lockconn.RUnlock()
 		}
 	}
 }
