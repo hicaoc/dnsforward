@@ -7,7 +7,7 @@ import (
 	"net"
 	"os"
 	"strconv"
-	"sync"
+	//	"sync"
 )
 
 type connchan struct {

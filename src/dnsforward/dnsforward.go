@@ -135,7 +135,7 @@ func (d *dnsforward) dnsudp() {
 		// 读取数据
 		data := make([]byte, 4096)
 		read, remoteAddr, err := socket.ReadFromUDP(data)
-		if err != nil {
+		if err != nil || read < 12 {
 			log.Println("UDP读取数据失败!", err)
 			continue
 		}
