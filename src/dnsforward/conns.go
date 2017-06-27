@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"log"
 	"net"
 	"os"
@@ -73,7 +74,8 @@ func (c *conns) forwardudp(connchan *connchan, remoteadr string, chanid int) {
 			continue
 		}
 		connchan.dnsresponschan <- dnsrespons[:read]
-		//	fmt.Println("respons is---", chanid, read, conn.RemoteAddr(), dnsrespons[0:read])
+		fmt.Println("respons is---", chanid, read, conn.RemoteAddr(),
+			dns.getdomain(dnsrespons[:read]).domainname)
 	}
 }
 

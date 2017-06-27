@@ -17,15 +17,18 @@ import (
 )
 
 type config struct {
-	localudpport   int
-	remotednsaddr1 string
-	remotednsaddr2 string
-	localdnsaddr1  string
-	localdnsaddr2  string
-	ednssubnet     []byte
-	cache          bool
-	connpoolsize   int
-	localdomain    *regexp.Regexp
+	localudpport      int
+	remotednsaddr1    string
+	remotednsaddr2    string
+	localdnsaddr1     string
+	localdnsaddr2     string
+	ednssubnet        []byte
+	cache             bool
+	connpoolsize      int
+	localdomainlist   string
+	outsidedomainlist string
+	localdomain       *regexp.Regexp
+	outsidedomain     *regexp.Regexp
 }
 
 var conf = &config{}
@@ -33,9 +36,7 @@ var conf = &config{}
 func (c *config) init() {
 
 	conf.readconffile()
-	if conf.localdnsaddr1 != "" {
-		conf.readdomainlist()
-	}
+
 	//	go c.cronread()
 
 }
@@ -91,6 +92,22 @@ func (c *config) readconffile() {
 			if string(s[1]) == "true" {
 				c.cache = true
 			}
+		case "localdomainlist":
+			c.localdomainlist = s[1]
+			if conf.localdnsaddr1 != "" {
+				var err error
+				if c.localdomain, err = conf.readdomainlist(s[1]); err != nil {
+					log.Println("Read localdomainlist err:", err)
+				}
+			}
+
+		case "outsidedomainlist":
+			c.outsidedomainlist = s[1]
+			var err error
+			if c.outsidedomain, _ = conf.readdomainlist(s[1]); err != nil {
+				log.Println("Read outsidedomainlist err:", err)
+			}
+
 		}
 
 	}
@@ -110,13 +127,13 @@ func (c *config) readconffile() {
 	log.Println("Read dnsforward conf file ok ")
 }
 
-func (c *config) readdomainlist() {
+func (c *config) readdomainlist(s string) (*regexp.Regexp, error) {
 
-	log.Println("read local domainlist  file localdomain.txt ......")
+	log.Println("read  domainlist  file ", s, " ......")
 
-	f, err := os.Open("./localdomain.txt")
+	f, err := os.Open(s)
 	if err != nil {
-		log.Println("open ./localdomain.txt error", err)
+		log.Println("open ", s, " err!")
 		os.Exit(1)
 	}
 	defer f.Close()
@@ -143,10 +160,12 @@ func (c *config) readdomainlist() {
 
 	}
 
-	c.localdomain, _ = regexp.Compile(strings.TrimRight(strings.Replace(strbuffer.String(), "\n", "|", -1), "|"))
+	log.Println("read domainlist  file ", s, " ok ")
+
+	return regexp.Compile(strings.TrimRight(strings.Replace(strbuffer.String(), "\n", "|", -1), "|"))
 
 	//	fmt.Println("str2:", str)
-	log.Println("read local  domainlist  file localdomain.txt ok ")
+
 }
 
 func strtoint(a string) int {

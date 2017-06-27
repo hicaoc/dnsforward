@@ -178,7 +178,7 @@ func (d *dnsforward) dnsudp() {
 
 				copy(dns.packet, domain.tracactionid)
 				_, err = socket.WriteToUDP(dns.packet, remoteAddr)
-				fmt.Println("cache respone:", dns.domainname)
+				fmt.Println("cache respone:", remoteAddr, ":", dns.domainname)
 				if err != nil {
 					fmt.Println("send dns packet error :", err)
 					//	return
@@ -190,11 +190,26 @@ func (d *dnsforward) dnsudp() {
 		} else {
 			d.lock.RUnlock()
 		}
+		//外部域名列表优先，如果配置了外部域名列表，那么不匹配的域名都将本地解析
+		if conf.outsidedomainlist != "" {
+			if !conf.outsidedomain.MatchString(domain.domainname) {
+				fmt.Println("not match outside domainname :", remoteAddr, ":", domain.domainname)
+				if conf.localdnsaddr1 != "" {
+					requestchan3 <- data[0:read]
+				}
+				if conf.localdnsaddr2 != "" {
+					requestchan4 <- data[0:read]
+				}
+				continue
+			} else {
+				fmt.Println("match outside domainname:", remoteAddr, ":", domain.domainname)
+			}
+		}
 
-		if conf.localdnsaddr1 != "" || conf.localdnsaddr2 != "" {
+		if (conf.localdnsaddr1 != "" || conf.localdnsaddr2 != "") && conf.localdomainlist != "" && conf.outsidedomainlist == "" {
 
 			if conf.localdomain.MatchString(domain.domainname) {
-				fmt.Println("match local domain:", domain.domainname)
+				fmt.Println("match local domainname:", remoteAddr, ":", domain.domainname)
 				if conf.localdnsaddr1 != "" {
 					requestchan3 <- data[0:read]
 				}
