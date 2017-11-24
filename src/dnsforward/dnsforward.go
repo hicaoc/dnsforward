@@ -25,8 +25,8 @@ type domainitem struct {
 
 type dnsforward struct {
 	domainmap map[string]*domainitem
-	lock      sync.RWMutex
-	lockconn  sync.RWMutex
+	lock      sync.Mutex
+	lockconn  sync.Mutex
 	conns     []map[uint32]*net.UDPAddr //transaction ID
 }
 
@@ -164,16 +164,15 @@ func (d *dnsforward) dnsudp() {
 		//	hash.AddNode(remoteAddr.IP.String(), 1)
 
 		domain := d.getdomain(data[:read])
-		d.lock.RLock()
+		d.lock.Lock()
+
 		if dns, ok := d.domainmap[domain.domainname]; conf.cache && domain.querytype == 1 && ok {
-			d.lock.RUnlock()
+
 			timeinter := time.Now().Unix() - dns.createtime
 			if timeinter < int64(dns.ttl) {
 				dns.ttl = dns.ttl - int(timeinter)
 				if dns.ttl < 0 {
-					d.lock.Lock()
 					delete(d.domainmap, domain.domainname)
-					d.lock.Unlock()
 				}
 
 				copy(dns.packet, domain.tracactionid)
@@ -183,13 +182,12 @@ func (d *dnsforward) dnsudp() {
 					fmt.Println("send dns packet error :", err)
 					//	return
 				}
-
+				d.lock.Unlock()
 				continue
 
 			}
-		} else {
-			d.lock.RUnlock()
 		}
+		d.lock.Unlock()
 		//外部域名列表优先，如果配置了外部域名列表，那么不匹配的域名都将本地解析
 		if conf.outsidedomainlist != "" {
 			if !conf.outsidedomain.MatchString(domain.domainname) {
@@ -302,19 +300,16 @@ func (d *dnsforward) reciverespons(i int, connpool *conns, conn *net.UDPConn) {
 			d.domainmap[domain.domainname] = domain
 			d.lock.Unlock()
 		}
-		d.lockconn.RLock()
+
+		d.lockconn.Lock()
 		if c, ok := d.conns[i][bytestoInt16LE(senddata[0:2])]; ok {
-			d.lockconn.RUnlock()
 			_, err := conn.WriteToUDP(senddata, c)
-			d.lockconn.Lock()
 			delete(d.conns[i], bytestoInt16LE(senddata[0:2]))
-			d.lockconn.Unlock()
+
 			if err != nil {
 				fmt.Println("1 发送数据失败!", err)
-				//	return
 			}
-		} else {
-			d.lockconn.RUnlock()
 		}
+		d.lockconn.Unlock()
 	}
 }
